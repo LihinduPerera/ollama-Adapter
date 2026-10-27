@@ -2,7 +2,7 @@
 param(
     [string]$Workspace = (Get-Location).Path,
     [int]$Port = 8765,
-    [string]$Models = "qwen2.5-coder:7b",
+    [string]$Models = "",
     [string]$ApiKey = "",
     [string]$LogLevel = "INFO"
 )
@@ -27,7 +27,9 @@ $WorkspacePath = (Resolve-Path -LiteralPath $Workspace).Path
 $env:ADAPTER_HOST = "127.0.0.1"
 $env:ADAPTER_PORT = "$Port"
 $env:ADAPTER_WORKSPACE = $WorkspacePath
-$env:ADAPTER_MODELS = $Models
+if ($Models -ne "") {
+    $env:ADAPTER_MODELS = $Models
+}
 $env:ADAPTER_LOG_LEVEL = $LogLevel
 if ($ApiKey) {
     $env:ADAPTER_API_KEY = $ApiKey

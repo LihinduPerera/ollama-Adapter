@@ -288,22 +288,56 @@ class Settings:
             return True
         if model in self.allowed_models:
             return True
+        model_lower = model.lower()
+        for allowed in self.allowed_models:
+            if allowed.lower() == model_lower:
+                return True
         if "/" in model:
-            return model.split("/", 1)[1] in self.allowed_models
+            suffix = model.split("/", 1)[1]
+            if suffix in self.allowed_models:
+                return True
+            suffix_lower = suffix.lower()
+            for allowed in self.allowed_models:
+                if allowed.lower() == suffix_lower:
+                    return True
+                if allowed.lower() in suffix_lower or suffix_lower in allowed.lower():
+                    return True
+        for allowed in self.allowed_models:
+            if allowed.lower() in model_lower or model_lower in allowed.lower():
+                return True
         return False
 
     def resolve_model(self, model: str) -> str:
         """Return the Ollama model name, accepting an optional provider prefix."""
+        if "*" in self.allowed_models:
+            if "/" in model:
+                return model.split("/", 1)[1]
+            return model
+        # Direct match
         if model in self.allowed_models:
             return model
+        # Case-insensitive direct match
+        model_lower = model.lower()
+        for allowed in self.allowed_models:
+            if allowed.lower() == model_lower:
+                return allowed
+        # Strip provider prefix
         if "/" in model:
             suffix = model.split("/", 1)[1]
             if suffix in self.allowed_models:
                 return suffix
-            if "*" in self.allowed_models:
-                return suffix
-        if "*" in self.allowed_models:
-            return model
+            suffix_lower = suffix.lower()
+            for allowed in self.allowed_models:
+                if allowed.lower() == suffix_lower:
+                    return allowed
+            # Try partial match
+            for allowed in self.allowed_models:
+                if allowed.lower() in suffix_lower or suffix_lower in allowed.lower():
+                    return allowed
+        # Try partial match on full model
+        for allowed in self.allowed_models:
+            if allowed.lower() in model_lower or model_lower in allowed.lower():
+                return allowed
         raise ConfigError(
             "Model is not in ADAPTER_MODELS. "
             f"Allowed: {', '.join(self.allowed_models)}"
