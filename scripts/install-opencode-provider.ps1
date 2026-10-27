@@ -3,9 +3,6 @@ param(
     [string]$ConfigPath = (Join-Path $env:USERPROFILE ".config\opencode\opencode.json"),
     [string]$ProviderId = "ollama-adapter",
     [string]$BaseUrl = "http://127.0.0.1:8765/v1",
-    [string]$Model = "qwen2.5-coder:7b",
-    [int]$ContextLimit = 16384,
-    [int]$OutputLimit = 4096,
     [int]$TimeoutMs = 300000
 )
 
@@ -17,7 +14,7 @@ if (-not (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) {
 
 $raw = Get-Content -LiteralPath $ConfigPath -Raw
 try {
-    $config = $raw | ConvertFrom-Json
+    $config = $raw | ConvertFrom-Json -Depth 100
 }
 catch {
     throw "OpenCode config is not plain JSON (it may contain comments). Back it up and edit it manually, or remove comments first."
@@ -34,6 +31,24 @@ if ($null -eq $config.provider) {
     $config.provider = [pscustomobject]@{}
 }
 
+$models = [ordered]@{
+    "qwen2.5-coder:7b"   = [ordered]@{
+        name      = "Qwen2.5 Coder 7B (adapter)"
+        tool_call = $true
+        limit     = [ordered]@{ context = 16384; output = 4096 }
+    }
+    "deepseek-coder:6.7b" = [ordered]@{
+        name      = "DeepSeek Coder 6.7B (adapter)"
+        tool_call = $true
+        limit     = [ordered]@{ context = 16384; output = 4096 }
+    }
+    "yi-coder:9b"        = [ordered]@{
+        name      = "Yi Coder 9B (adapter)"
+        tool_call = $true
+        limit     = [ordered]@{ context = 32768; output = 8192 }
+    }
+}
+
 $providerEntry = [ordered]@{
     npm     = "@ai-sdk/openai-compatible"
     name    = "Ollama Tool Adapter"
@@ -41,16 +56,7 @@ $providerEntry = [ordered]@{
         baseURL = $BaseUrl
         timeout = $TimeoutMs
     }
-    models  = [ordered]@{
-        $Model = [ordered]@{
-            name      = "Qwen2.5 Coder 7B (adapter)"
-            tool_call = $true
-            limit     = [ordered]@{
-                context = $ContextLimit
-                output  = $OutputLimit
-            }
-        }
-    }
+    models  = [pscustomobject]$models
 }
 
 $existing = $config.provider.PSObject.Properties[$ProviderId]
@@ -71,20 +77,12 @@ while (Test-Path -LiteralPath $backupPath) {
 Copy-Item -LiteralPath $ConfigPath -Destination $backupPath
 Write-Host "Backed up config to: $backupPath"
 
-$json = $config | ConvertTo-Json -Depth 20
-try {
-    $null = $json | ConvertFrom-Json
-}
-catch {
-    throw "Refusing to write invalid JSON to $ConfigPath"
-}
+$json = $config | ConvertTo-Json -Depth 30
+try { $null = $json | ConvertFrom-Json } catch { throw "Refusing to write invalid JSON to $ConfigPath" }
+
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($ConfigPath, $json + [Environment]::NewLine, $utf8NoBom)
 
-Write-Host "Added provider '$ProviderId' to $ConfigPath"
-Write-Host "Model: $ProviderId/$Model"
-Write-Host "Restart OpenCode, then verify with:"
-Write-Host "  opencode models"
-Write-Host ""
-Write-Host "To revert:"
-Write-Host "  .\scripts\revert-opencode-config.ps1 -BackupPath `"$backupPath`""
+Write-Host "Added/updated provider '$ProviderId' with models:"
+$models.Keys | ForEach-Object { Write-Host "  - $ProviderId/$_" }
+Write-Host "Restart OpenCode, then verify with: opencode models"

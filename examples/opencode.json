@@ -16,6 +16,22 @@
             "context": 16384,
             "output": 4096
           }
+        },
+        "deepseek-coder:6.7b": {
+          "name": "DeepSeek Coder 6.7B (adapter)",
+          "tool_call": true,
+          "limit": {
+            "context": 16384,
+            "output": 4096
+          }
+        },
+        "yi-coder:9b": {
+          "name": "Yi Coder 9B (adapter)",
+          "tool_call": true,
+          "limit": {
+            "context": 32768,
+            "output": 8192
+          }
         }
       }
     }
