@@ -1,0 +1,23 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "ollama-adapter": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama Tool Adapter",
+      "options": {
+        "baseURL": "http://127.0.0.1:8765/v1",
+        "timeout": 300000
+      },
+      "models": {
+        "qwen2.5-coder:7b": {
+          "name": "Qwen2.5 Coder 7B (adapter)",
+          "tool_call": true,
+          "limit": {
+            "context": 16384,
+            "output": 4096
+          }
+        }
+      }
+    }
+  }
+}
