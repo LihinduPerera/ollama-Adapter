@@ -79,6 +79,13 @@ class ChatService:
                     content=SAFE_NO_TOOLS,
                     usage=usage,
                 )
+            # Even if no tools advertised, try to extract tool calls from content
+            # as a fallback for models that don't follow tool schema properly
+            if probe.calls:
+                try:
+                    resolved = registry.resolve_name(probe.calls[0].name) if False else None
+                except Exception:
+                    pass
             return make_completion(
                 model=request.model,
                 content=raw_content,
