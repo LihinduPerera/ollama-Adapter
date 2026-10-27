@@ -128,14 +128,29 @@ def parse_tool_calls(message: dict[str, Any], *, tools_advertised: bool) -> Pars
         try:
             payload = json.loads(candidate)
         except json.JSONDecodeError:
-            if _TOOL_SHAPE_RE.match(candidate):
-                return ParseResult(
-                    calls=[],
-                    text="",
-                    had_tool_syntax=True,
-                    errors=["Invalid JSON in a bare tool call"],
-                )
-            return ParseResult(text=content.strip())
+            # Try to be lenient - look for JSON objects
+            if _TOOL_SHAPE_RE.match(candidate) or '"tool"' in candidate or '"name"' in candidate:
+                # Try to extract JSON object
+                m = re.search(r'\{.*\}', candidate, re.DOTALL)
+                if m:
+                    try:
+                        payload = json.loads(m.group(0))
+                    except Exception:
+                        return ParseResult(
+                            calls=[],
+                            text="",
+                            had_tool_syntax=True,
+                            errors=["Invalid JSON in a bare tool call"],
+                        )
+                else:
+                    return ParseResult(
+                        calls=[],
+                        text="",
+                        had_tool_syntax=True,
+                        errors=["Invalid JSON in a bare tool call"],
+                    )
+            else:
+                return ParseResult(text=content.strip())
 
         calls, errors = _calls_from_payload(
             payload, source="bare_json", require_arguments=True
